@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>起床铃投稿系统</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <!-- 引入 Font Awesome 和 字体 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #fdf6e3;
+            --container-bg: rgba(255, 255, 255, 0.9);
+            --text-color: #333;
+            --accent-color: #ff6b6b;
+            --btn-green: #2ecc71;
+            --btn-green-hover: #27ae60;
+            --btn-blue: #3498db;
+            --btn-blue-hover: #2980b9;
+        }
+
+        body {
+            font-family: 'ZCOOL KuaiLe', sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: var(--container-bg);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 { text-align: center; color: var(--accent-color); margin-bottom: 20px; }
+
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; }
+        .search-box input { flex: 1; padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-family: inherit; font-size: 16px; }
+        .search-box button { padding: 12px 20px; background-color: var(--btn-blue); color: white; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 16px; transition: background 0.3s; white-space: nowrap; }
+        .search-box button:hover { background-color: var(--btn-blue-hover); }
+
+        /* 移动端搜索框适配 */
+        @media (max-width: 480px) {
+            .search-box { flex-direction: column; }
+            .search-box input, .search-box button { width: 100%; box-sizing: border-box; }
+        }
+
+        .result-container { height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 8px; background: #fff; padding: 10px; margin-bottom: 20px; }
+        .music-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #f0f0f0; gap: 15px; }
+        .music-item:last-child { border-bottom: none; }
+        .music-cover { width: 50px; height: 50px; border-radius: 5px; object-fit: cover; background-color: #f5f5f5; }
+        .music-info { flex: 1; overflow: hidden; }
+        .music-title { font-weight: bold; font-size: 16px; margin: 0 0 5px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .music-artist { font-size: 12px; color: #666; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        .submit-btn { background-color: var(--btn-green); color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-family: inherit; transition: background 0.3s; white-space: nowrap; }
+        .submit-btn:hover { background-color: var(--btn-green-hover); }
+        .submit-btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+
+        .feedback-box { margin-top: 20px; border-top: 2px dashed #ddd; padding-top: 20px; }
+        .feedback-box textarea { width: 100%; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-family: inherit; margin-bottom: 10px; box-sizing: border-box; resize: vertical; min-height: 80px; }
+        .feedback-box button { width: 100%; padding: 12px; background-color: var(--accent-color); color: white; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 16px; }
+
+        /* Q&A 板块样式 */
+        .qa-container { margin-top: 30px; width: 100%; border-top: 2px dashed #ddd; padding-top: 20px; }
+        .qa-container h3 { color: var(--btn-blue); text-align: center; margin-bottom: 20px; }
+        .qa-list { display: flex; flex-direction: column; gap: 15px; }
+        .qa-card { background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 4px solid var(--btn-blue); text-align: left; }
+        .qa-question { font-weight: bold; margin-bottom: 8px; color: #2c3e50; font-size: 16px;}
+        .qa-answer { color: #555; font-size: 14px; white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 15px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-content h2 { margin-top: 0; color: var(--accent-color); }
+        .modal-btn { margin-top: 20px; padding: 10px 20px; background: var(--btn-blue); color: white; border: none; border-radius: 5px; cursor: pointer; font-family: inherit; transition: 0.3s; }
+        .modal-btn:hover { background: var(--btn-blue-hover); }
+        .hidden { display: none !important; }
+
+        .success-modal-content { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .success-icon { font-size: 60px; margin-bottom: 20px; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .success-text { font-size: 15px; color: var(--text-color); margin-bottom: 20px; line-height: 1.6; }
+        .success-countdown-text { font-size: 14px; color: #888; background: #f5f6fa; padding: 10px; border-radius: 8px; display: inline-block; }
+    </style>
+</head>
+<body>
+
+    <div id="announcement-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2><i class="fas fa-bullhorn"></i> 公告</h2>
+            <p id="announcement-text" style="white-space: pre-wrap; word-wrap: break-word; text-align: left; max-height: 60vh; overflow-y: auto;">加载中...</p>
+            <button class="modal-btn" onclick="closeAnnouncement()">我知道了</button>
+        </div>
+    </div>
+
+    <div id="submit-modal" class="modal-overlay hidden">
+        <div class="modal-content success-modal-content">
+            <i id="modal-icon" class="fas fa-spinner fa-spin success-icon" style="color: #3498db;"></i>
+            <h2 id="modal-title" style="color: #3498db; margin-bottom: 15px;">正在提交请求...</h2>
+            <div id="modal-text" class="success-text">正在连接服务器，准备进行 AI 审核。</div>
+            <div id="modal-countdown-div" class="success-countdown-text hidden">
+                将在 <span id="success-countdown" style="color: var(--accent-color); font-weight: bold; font-size: 18px;">5</span> 秒后回到初始页面...
+            </div>
+            <br>
+            <button id="modal-action-btn" class="modal-btn hidden">立即跳转</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>🎵 起床铃投稿</h1>
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="输入歌名/歌手搜索..." onkeypress="handleEnter(event)">
+            <button onclick="searchMusic()"><i class="fas fa-search"></i> 搜索</button>
+        </div>
+        <div class="result-container" id="result-list">
+            <div style="text-align: center; padding: 20px; color: #999;">请搜索你要投稿的音乐</div>
+        </div>
+        <div class="feedback-box">
+            <h3><i class="fas fa-comment-dots"></i> 问题反馈</h3>
+            <textarea id="feedback-content" placeholder="遇到Bug？或者有建议？请在这里留言..."></textarea>
+            <button onclick="submitFeedback()">提交反馈</button>
+        </div>
+
+        <div class="qa-container">
+            <h3><i class="fas fa-question-circle"></i> 常见问题 (Q&A)</h3>
+            <div class="qa-list" id="qa-list">
+                <div style="text-align: center; color: #999;">加载中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // 获取公告
+            fetch('api.php?action=get_announcement')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.announcement) {
+                        document.getElementById('announcement-text').textContent = data.announcement;
+                        document.getElementById('announcement-modal').classList.remove('hidden');
+                    }
+                })
+                .catch(err => console.error('获取公告失败', err));
+
+            // 获取Q&A
+            fetch('api.php?action=get_qa')
+                .then(res => res.json())
+                .then(data => {
+                    const qaList = document.getElementById('qa-list');
+                    if (data.status === 'success' && data.qa && data.qa.length > 0) {
+                        qaList.innerHTML = data.qa.map(item => `
+                            <div class="qa-card">
+                                <div class="qa-question"><i class="fas fa-q"></i> ${item.question}</div>
+                                <div class="qa-answer"><i class="fas fa-a"></i> ${item.answer}</div>
+                            </div>
+                        `).join('');
+                    } else {
+                        qaList.innerHTML = '<div style="text-align: center; color: #999;">暂无常见问题</div>';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('qa-list').innerHTML = '<div style="text-align: center; color: red;">Q&A加载失败</div>';
+                });
+        });
+
+        function closeAnnouncement() {
+            document.getElementById('announcement-modal').classList.add('hidden');
+        }
+
+        function handleEnter(e) { if (e.key === 'Enter') searchMusic(); }
+
+        async function searchMusic() {
+            const keyword = document.getElementById('search-input').value.trim();
+            const resultList = document.getElementById('result-list');
+            if (!keyword) return alert('请输入搜索关键词');
+            resultList.innerHTML = '<div style="text-align: center; padding: 20px;">搜索中...</div>';
+
+            try {
+                const response = await fetch(`api.php?action=search_music&keyword=${encodeURIComponent(keyword)}`);
+                const data = await response.json();
+                const songs = data.result ? (data.result.songs || data.result) : [];
+                if (songs && songs.length) renderResult(songs);
+                else resultList.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">未找到相关歌曲</div>';
+            } catch (error) {
+                console.error('搜索出错:', error);
+                resultList.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">网络错误或服务器异常，搜索失败。</div>';
+            }
+        }
+
+        function renderResult(songs) {
+            const resultList = document.getElementById('result-list');
+            resultList.innerHTML = '';
+            songs.forEach(song => {
+                if(!song || !song.id || !song.name) return;
+                const artistName = (song.artists && song.artists[0] && song.artists[0].name) ? song.artists[0].name : '未知歌手';
+                const albumName = song.album ? song.album.name : '未知专辑';
+                const defaultCover = 'https://s4.music.126.net/style/web2/img/default/default_album.jpg'; 
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'music-item';
+                itemDiv.innerHTML = `
+                    <img class="music-cover" id="cover-${song.id}" src="${defaultCover}" alt="封面">
+                    <div class="music-info">
+                        <h4 class="music-title" title="${song.name}">${song.name}</h4>
+                        <p class="music-artist" title="${artistName} - ${albumName}">${artistName} - ${albumName}</p>
+                    </div>
+                    <button class="submit-btn" onclick="submitSong(${song.id}, '${song.name.replace(/'/g, "\\'")}', '${artistName.replace(/'/g, "\\'")}', '${albumName.replace(/'/g, "\\'")}')">
+                        <i class="fas fa-paper-plane"></i> 投稿
+                    </button>
+                `;
+                resultList.appendChild(itemDiv);
+
+                fetch(`api.php?action=music_detail&id=${song.id}`)
+                    .then(res => res.json())
+                    .then(d => {
+                        if(d.songs && d.songs[0] && d.songs[0].al && d.songs[0].al.picUrl) {
+                            document.getElementById(`cover-${song.id}`).src = d.songs[0].al.picUrl + '?param=50y50';
+                        }
+                    }).catch(e => console.error(e));
+            });
+        }
+
+        function submitSong(id, name, artist, album) {
+            const btns = document.querySelectorAll('.submit-btn');
+            btns.forEach(btn => btn.disabled = true);
+
+            const modal = document.getElementById('submit-modal');
+            const icon = document.getElementById('modal-icon');
+            const title = document.getElementById('modal-title');
+            const text = document.getElementById('modal-text');
+            const countdownDiv = document.getElementById('modal-countdown-div');
+            const countdownSpan = document.getElementById('success-countdown');
+            const actionBtn = document.getElementById('modal-action-btn');
+
+            modal.classList.remove('hidden');
+            icon.className = 'fas fa-spinner fa-spin success-icon';
+            icon.style.color = '#3498db';
+            icon.style.animation = 'spin 1s linear infinite';
+            title.style.color = '#3498db';
+            title.innerText = '正在提交请求...';
+            text.innerHTML = '正在连接服务器，准备进行 AI 审核。';
+            countdownDiv.classList.add('hidden');
+            actionBtn.classList.add('hidden');
+
+            setTimeout(() => {
+                if (title.innerText === '正在提交请求...') {
+                    title.innerText = 'AI 审核中...';
+                    text.innerHTML = 'AI 正在对歌词和曲风进行深度评估，这可能需要几秒钟，请耐心等待 ☕';
+                }
+            }, 1000);
+
+            const payload = { action: 'submit_song', id, name, artist, album };
+
+            fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(async res => {
+                const responseText = await res.text();
+                try {
+                    return JSON.parse(responseText);
+                } catch(e) {
+                    throw new Error("后端返回了非JSON数据，通常是超时或报错。原数据：" + responseText.substring(0,50));
+                }
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    icon.className = 'fas fa-check-circle success-icon';
+                    icon.style.color = 'var(--btn-green)';
+                    icon.style.animation = 'pulse 2s infinite';
+                    title.style.color = 'var(--btn-green)';
+                    title.innerText = 'AI 审核完毕！';
+                    text.innerHTML = `<i class="fas fa-robot"></i> 判定结果：<b>${data.ai_result_text}</b><br><i class="fas fa-user-check"></i> 审核通过后将由人工复选`;
+
+                    countdownDiv.classList.remove('hidden');
+                    actionBtn.classList.remove('hidden');
+                    actionBtn.innerText = '立即跳转';
+                    actionBtn.onclick = () => window.location.reload();
+
+                    let seconds = 5;
+                    countdownSpan.innerText = seconds;
+                    const countdown = setInterval(() => {
+                        seconds--;
+                        countdownSpan.innerText = seconds;
+                        if (seconds <= 0) {
+                            clearInterval(countdown);
+                            window.location.reload();
+                        }
+                    }, 1000);
+                } else {
+                    showError(data.message || '未知错误', btns);
+                }
+            })
+            .catch(err => {
+                console.error('提交异常详情:', err);
+                showError('处理失败，可能是AI思考时间过长导致超时（但后台记录通常已保存成功），请刷新页面。', btns);
+            });
+        }
+
+        function showError(errorMsg, btns) {
+            const modal = document.getElementById('submit-modal');
+            const icon = document.getElementById('modal-icon');
+            const title = document.getElementById('modal-title');
+            const text = document.getElementById('modal-text');
+            const countdownDiv = document.getElementById('modal-countdown-div');
+            const actionBtn = document.getElementById('modal-action-btn');
+
+            icon.className = 'fas fa-times-circle success-icon';
+            icon.style.color = 'var(--accent-color)';
+            icon.style.animation = 'none';
+            title.style.color = 'var(--accent-color)';
+            title.innerText = '温馨提示';
+            text.innerHTML = errorMsg;
+            countdownDiv.classList.add('hidden');
+            
+            actionBtn.classList.remove('hidden');
+            actionBtn.innerText = '关闭并刷新';
+            actionBtn.onclick = () => {
+                window.location.reload();
+            };
+        }
+
+        function submitFeedback() {
+            const content = document.getElementById('feedback-content').value.trim();
+            if (!content) return alert('请填写反馈内容');
+            fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'submit_feedback', content: content })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('反馈提交成功！感谢您的建议。');
+                    document.getElementById('feedback-content').value = '';
+                } else alert('提交失败: ' + data.message);
+            })
+            .catch(err => alert('网络错误，提交失败'));
+        }
+    </script>
+</body>
+</html>

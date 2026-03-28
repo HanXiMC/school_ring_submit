@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>后台管理 - 投稿系统</title>
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root { --primary: #3498db; --success: #2ecc71; --danger: #e74c3c; --bg: #f5f6fa; --text: #2c3e50; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; }
+        
+        #login-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: #2c3e50; display:flex; justify-content:center; align-items:center; z-index: 9999; }
+        .login-box { background: #fff; padding: 40px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; width: 90%; max-width: 400px; box-sizing: border-box; }
+        .login-box input { padding: 10px; border: 1px solid #ccc; border-radius: 5px; width: 100%; margin-bottom: 15px; box-sizing: border-box; }
+        .login-box button { padding: 10px 20px; background: var(--primary); color: #fff; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-size: 16px; }
+
+        .sidebar { width: 250px; background: #2c3e50; color: #ecf0f1; position: fixed; height: 100vh; padding-top: 20px; z-index: 100;}
+        .sidebar h2 { text-align: center; margin-bottom: 30px; font-size: 20px;}
+        .nav-item { padding: 15px 25px; cursor: pointer; transition: 0.3s; border-left: 4px solid transparent; }
+        .nav-item:hover, .nav-item.active { background: #34495e; border-left-color: var(--primary); }
+        .nav-item i { width: 25px; }
+        
+        .main-content { margin-left: 250px; padding: 30px; }
+        .panel { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: none; }
+        .panel.active { display: block; }
+        h3 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+
+        .data-list { list-style: none; padding: 0; }
+        .data-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; gap: 20px; }
+        .data-item img { width: 60px; height: 60px; border-radius: 5px; object-fit: cover; }
+        .data-info { flex: 1; min-width: 0; }
+        .data-info h4 { margin: 0 0 5px 0; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .data-info p { margin: 0; color: #7f8c8d; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+        
+        audio { height: 35px; width: 250px; outline: none; }
+        
+        .btn { padding: 8px 15px; border: none; border-radius: 5px; cursor: pointer; color: #fff; font-size: 13px; transition: 0.3s; white-space: nowrap; }
+        .btn-success { background: var(--success); }
+        .btn-success:hover { background: #27ae60; }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-primary { background: var(--primary); }
+
+        .setting-group { margin-bottom: 20px; }
+        .setting-group label { display: block; margin-bottom: 8px; font-weight: bold; }
+        .setting-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; resize: vertical; min-height: 80px;}
+        
+        .switch-container { display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 15px; border-radius: 5px; border-left: 4px solid var(--primary);}
+        .switch-container input[type="checkbox"] { transform: scale(1.3); cursor: pointer; flex-shrink: 0; }
+        
+        .feedback-item { background: #f9f9f9; padding: 15px; border-left: 4px solid var(--primary); margin-bottom: 10px; border-radius: 4px; }
+        .feedback-item .time { font-size: 12px; color: #999; margin-bottom: 5px; }
+
+        .search-input-box { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 20px; outline: none; transition: 0.3s; box-sizing: border-box; }
+        .search-input-box:focus { border-color: var(--primary); box-shadow: 0 0 5px rgba(52, 152, 219, 0.3); }
+        
+        .reason-card { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 15px; transition: 0.3s; }
+        .reason-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .reason-title { font-size: 16px; font-weight: 600; color: var(--primary); }
+        .reason-time { font-size: 12px; color: #999; }
+        .reason-box { background: #f8f9fa; border-left: 4px solid var(--danger); padding: 10px 15px; border-radius: 4px; max-height: 120px; overflow-y: auto; font-size: 13px; color: #555; white-space: pre-wrap; word-wrap: break-word; line-height: 1.6; }
+
+        /* ====== 移动端适配 ====== */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%; height: auto; position: fixed; top: 0; left: 0;
+                display: flex; flex-direction: row; overflow-x: auto;
+                padding: 0; white-space: nowrap; box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+            .sidebar h2 { display: none; } 
+            .nav-item {
+                display: inline-block; padding: 15px 20px;
+                border-left: none; border-bottom: 3px solid transparent; font-size: 14px;
+            }
+            .nav-item.active { border-left: none; border-bottom: 3px solid var(--primary); background: #34495e; }
+            .nav-item i { width: 20px; }
+            
+            .main-content { margin-left: 0; padding: 15px; margin-top: 60px; }
+            .panel { padding: 15px; }
+            
+            .data-item { flex-direction: column; align-items: stretch; gap: 12px; }
+            .data-item img { width: 100%; height: auto; max-height: 250px; border-radius: 8px; }
+            .data-info { width: 100%; }
+            .data-info h4, .data-info p { white-space: normal; } 
+            audio { width: 100%; }
+            .btn { width: 100%; text-align: center; padding: 12px 15px; font-size: 15px; }
+
+            .reason-header { flex-direction: column; align-items: flex-start; gap: 5px; }
+            
+            #panel-rejected > div:first-child { flex-direction: column; align-items: flex-start !important; gap: 10px; }
+            #panel-rejected > div:first-child button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="login-overlay">
+        <div class="login-box">
+            <h3 style="color:#333; border:none; margin-bottom: 20px;">管理员验证</h3>
+            <input type="password" id="admin-pwd" placeholder="请输入管理员密码" onkeypress="if(event.key==='Enter') login()">
+            <button onclick="login()">登 录</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <h2><i class="fas fa-music"></i> 管理后台</h2>
+        <div class="nav-item active" onclick="switchPanel('panel-approved')"><i class="fas fa-check-circle"></i> 已筛选 (AI通过)</div>
+        <div class="nav-item" onclick="switchPanel('panel-all')"><i class="fas fa-list"></i> 全部投稿</div>
+        <div class="nav-item" onclick="switchPanel('panel-rejected')"><i class="fas fa-times-circle"></i> 未选中 (AI拒绝)</div>
+        <div class="nav-item" onclick="switchPanel('panel-qa')"><i class="fas fa-question-circle"></i> Q&A 管理</div>
+        <div class="nav-item" onclick="switchPanel('panel-settings')"><i class="fas fa-cog"></i> 设置与反馈</div>
+        <div class="nav-item" onclick="switchPanel('panel-reasons')"><i class="fas fa-file-alt"></i> 失败原因查询</div>
+    </div>
+
+    <div class="main-content">
+        <div style="background: #fff; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <span style="font-size: 14px; color: #e67e22; flex: 1;"><i class="fas fa-exclamation-triangle"></i> 为避免卡顿，音频不会自动加载，封面图每秒自动加载一张。请点击右侧按钮手动分批加载音频。</span>
+            <button class="btn btn-success" onclick="startAudioLoading()"><i class="fas fa-play"></i> 开始加载所有音频直链</button>
+        </div>
+
+        <div id="panel-approved" class="panel active">
+            <h3><i class="fas fa-check-circle" style="color:var(--success)"></i> 已筛选 (AI 通过)</h3>
+            <ul class="data-list" id="list-approved">加载中...</ul>
+        </div>
+
+        <div id="panel-all" class="panel">
+            <h3><i class="fas fa-list"></i> 全部投稿请求</h3>
+            <ul class="data-list" id="list-all">加载中...</ul>
+        </div>
+
+        <div id="panel-rejected" class="panel">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                <h3 style="border: none; margin: 0; padding: 0;"><i class="fas fa-times-circle" style="color:var(--danger)"></i> 未选中 (AI 拒绝)</h3>
+                <button class="btn btn-primary" onclick="switchPanel('panel-reasons'); document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active')); document.querySelectorAll('.nav-item')[5].classList.add('active');"><i class="fas fa-search"></i> 去查询具体原因</button>
+            </div>
+            <ul class="data-list" id="list-rejected">加载中...</ul>
+        </div>
+
+        <div id="panel-qa" class="panel">
+            <h3><i class="fas fa-question-circle"></i> Q&A 常见问题管理</h3>
+            
+            <div class="setting-group" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid var(--primary);">
+                <h4><i class="fas fa-plus-circle"></i> 添加新问题</h4>
+                <input type="text" id="qa-question" class="search-input-box" placeholder="输入问题..." style="margin-bottom: 10px;">
+                <textarea id="qa-answer" placeholder="输入回答... (支持换行)" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; resize: vertical; min-height: 80px; margin-bottom: 10px;"></textarea>
+                <button class="btn btn-primary" onclick="addQA()"><i class="fas fa-save"></i> 保存并发布到前端</button>
+            </div>
+
+            <h4>现有 Q&A 列表</h4>
+            <div id="qa-admin-list">加载中...</div>
+        </div>
+
+        <div id="panel-settings" class="panel">
+            <h3><i class="fas fa-cog"></i> 系统设置</h3>
+            <div class="setting-group">
+                <label>前端公告内容</label>
+                <textarea id="announcement-input"></textarea>
+                <button class="btn btn-primary" onclick="updateAnnouncement()">保存公告</button>
+            </div>
+            
+            <div class="setting-group" style="margin-top:20px;">
+                <label>AI 智能审核模式设定</label>
+                <div class="switch-container">
+                    <input type="checkbox" id="ai-mode-toggle" onchange="toggleAiMode(this.checked)">
+                    <label for="ai-mode-toggle" style="margin: 0; cursor: pointer; font-weight: normal;">
+                        <strong>开启 AI 详细原因记录功能</strong><br>
+                        <span style="font-size: 13px; color: #666;">开启后，AI如果判定不合格，将返回原因并存入 <code>reason.json</code>。</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="setting-group" style="margin-top:30px; border-top: 1px dashed #ccc; padding-top:20px;">
+                <label>危险操作</label>
+                <button class="btn btn-danger" onclick="clearAllData()"><i class="fas fa-trash-alt"></i> 一键清空所有投稿及反馈数据</button>
+            </div>
+
+            <h3 style="margin-top: 40px;"><i class="fas fa-comment-dots"></i> 用户反馈列表</h3>
+            <div id="feedback-list">加载中...</div>
+        </div>
+
+        <div id="panel-reasons" class="panel">
+            <h3><i class="fas fa-file-alt"></i> 失败原因查询</h3>
+            <input type="text" id="reason-search" class="search-input-box" placeholder="边打字边实时搜索：输入歌名、歌手或原因关键词..." oninput="filterReasons()">
+            <div id="list-reasons">加载中...</div>
+        </div>
+    </div>
+
+    <script>
+        fetch('api.php?action=check_login')
+            .then(res => res.json())
+            .then(data => {
+                if (data.logged_in) {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    loadAdminData();
+                }
+            });
+
+        function login() {
+            const pwd = document.getElementById('admin-pwd').value;
+            fetch('api.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({action: 'verify_login', password: pwd})
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'success') {
+                    document.getElementById('login-overlay').style.display = 'none';
+                    loadAdminData();
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        function switchPanel(panelId) {
+            document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        let globalData = null;
+        let globalReasons = []; 
+        let audioLoadQueue = [];
+        let imageLoadQueue = [];
+        let isAudioLoading = false;
+        let isImageLoading = false;
+
+        function loadAdminData() {
+            fetch('api.php?action=get_admin_data')
+                .then(res => res.json())
+                .then(res => {
+                    if(res.code === 401) { location.reload(); return; }
+                    globalData = res.data;
+                    renderLists();
+                    document.getElementById('announcement-input').value = globalData.announcement || '';
+                    document.getElementById('ai-mode-toggle').checked = globalData.ai_reason_mode === true;
+                    renderFeedbacks();
+                });
+            loadReasons();
+            loadQA();
+        }
+
+        function renderLists() {
+            audioLoadQueue = [];
+            imageLoadQueue = [];
+
+            const render = (songs, containerId) => {
+                const container = document.getElementById(containerId);
+                if (!songs || songs.length === 0) {
+                    container.innerHTML = '<div style="padding: 20px; color: #999;">暂无数据</div>';
+                    return;
+                }
+                
+                container.innerHTML = songs.map(song => {
+                    const encodedSong = encodeURIComponent(JSON.stringify(song));
+                    const imgId = `img-${containerId}-${song.id}`;
+                    const audioId = `audio-${containerId}-${song.id}`;
+                    
+                    imageLoadQueue.push({ id: imgId, src: song.picUrl });
+                    audioLoadQueue.push({ songId: song.id, elemId: audioId });
+
+                    return `
+                        <li class="data-item">
+                            <!-- 初始先填充个透明图 -->
+                            <img id="${imgId}" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="封面" style="background-color: #f0f0f0;">
+                            <div class="data-info">
+                                <h4>${song.name}</h4>
+                                <p>${song.artist} - ${song.album} | 投稿: ${song.timestamp}</p>
+                            </div>
+                            <audio id="${audioId}" controls preload="none">
+                                <source src="" type="audio/mpeg">
+                            </audio>
+                            <button class="btn btn-success" onclick="pushToSite('${encodedSong}')"><i class="fas fa-share-square"></i> 推送到网站</button>
+                        </li>
+                    `;
+                }).join('');
+            };
+
+            render(globalData.submissions.approved, 'list-approved');
+            render(globalData.submissions.all, 'list-all');
+            render(globalData.submissions.rejected, 'list-rejected');
+
+            startImageLoading();
+        }
+
+        // ================== 图片/音频队列节流控制 ==================
+        function startImageLoading() {
+            if (isImageLoading || imageLoadQueue.length === 0) return;
+            isImageLoading = true;
+            const loadNextImage = () => {
+                if (imageLoadQueue.length === 0) {
+                    isImageLoading = false;
+                    return;
+                }
+                const item = imageLoadQueue.shift();
+                const imgElem = document.getElementById(item.id);
+                if (imgElem) {
+                    const tempImg = new Image();
+                    tempImg.onload = () => { imgElem.src = item.src; };
+                    tempImg.src = item.src;
+                }
+                setTimeout(loadNextImage, 10); // 0.01秒1张
+            };
+            loadNextImage();
+        }
+
+        function startAudioLoading() {
+            if (isAudioLoading) {
+                alert("音频正在加载中，请耐心等候...");
+                return;
+            }
+            if (audioLoadQueue.length === 0) {
+                alert("当前页面暂无需要加载的音频。");
+                return;
+            }
+            isAudioLoading = true;
+            
+            const loadAudioChunk = () => {
+                if (audioLoadQueue.length === 0) {
+                    isAudioLoading = false;
+                    alert("✅ 全部音频链接获取完成！");
+                    return;
+                }
+                const chunk = audioLoadQueue.splice(0, 8); // 每次抽取8个
+                chunk.forEach(item => {
+                    fetch('api.php?action=music_url&id=' + item.songId)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.url) {
+                                const audioElem = document.getElementById(item.elemId);
+                                if (audioElem) {
+                                    audioElem.src = data.url;
+                                    audioElem.load();
+                                }
+                            }
+                        }).catch(e => console.error(e));
+                });
+                setTimeout(loadAudioChunk, 500); // 1秒5条
+            };
+            loadAudioChunk();
+        }
+        // =========================================================
+
+        function loadQA() {
+            fetch('api.php?action=get_qa')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        renderQA(data.qa || []);
+                    }
+                });
+        }
+
+        function renderQA(qaList) {
+            const container = document.getElementById('qa-admin-list');
+            if (!qaList || qaList.length === 0) {
+                container.innerHTML = '<div style="color: #999; padding: 20px;">暂无 Q&A，请在上方添加。</div>';
+                return;
+            }
+            container.innerHTML = qaList.map(item => `
+                <div class="reason-card">
+                    <div class="reason-header">
+                        <div class="reason-title" style="color: #2c3e50;"><i class="fas fa-q"></i> ${item.question}</div>
+                        <button class="btn btn-danger" onclick="deleteQA('${item.id}')"><i class="fas fa-trash"></i> 删除</button>
+                    </div>
+                    <div class="reason-box" style="border-left-color: var(--primary); color: #555;"><i class="fas fa-a"></i> ${item.answer}</div>
+                </div>
+            `).join('');
+        }
+
+        function addQA() {
+            const question = document.getElementById('qa-question').value.trim();
+            const answer = document.getElementById('qa-answer').value.trim();
+            if (!question || !answer) return alert('问题和回答不能为空');
+            
+            fetch('api.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'add_qa', question, answer })
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'success') {
+                    alert('Q&A 添加成功并已同步至前端');
+                    document.getElementById('qa-question').value = '';
+                    document.getElementById('qa-answer').value = '';
+                    loadQA();
+                } else {
+                    alert('添加失败: ' + data.message);
+                }
+            }).catch(() => alert('网络错误'));
+        }
+
+        function deleteQA(id) {
+            if (!confirm('确定删除此 Q&A 吗？此操作立即生效。')) return;
+            fetch('api.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'delete_qa', id })
+            }).then(res => res.json()).then(data => {
+                if (data.status === 'success') {
+                    loadQA();
+                } else {
+                    alert('删除失败');
+                }
+            }).catch(() => alert('网络错误'));
+        }
+
+        function renderFeedbacks() {
+            const container = document.getElementById('feedback-list');
+            if (!globalData.feedbacks || globalData.feedbacks.length === 0) {
+                container.innerHTML = '<div style="color: #999;">暂无反馈</div>';
+                return;
+            }
+            container.innerHTML = globalData.feedbacks.map(f => `
+                <div class="feedback-item">
+                    <div class="time">${f.time}</div>
+                    <div>${f.content}</div>
+                </div>
+            `).join('');
+        }
+
+        function loadReasons() {
+            fetch('api.php?action=get_reasons')
+                .then(res => res.json())
+                .then(res => {
+                    if(res.status === 'success') {
+                        globalReasons = res.data || [];
+                        renderReasons(globalReasons);
+                    }
+                });
+        }
+
+        function renderReasons(dataList) {
+            const container = document.getElementById('list-reasons');
+            if (!dataList || dataList.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; color: #999; text-align: center;">🎉 暂无相关失败记录或记录已被清空</div>';
+                return;
+            }
+
+            container.innerHTML = dataList.map(item => `
+                <div class="reason-card">
+                    <div class="reason-header">
+                        <div class="reason-title"><i class="fas fa-music"></i> ${item.songName} - ${item.artist}</div>
+                        <div class="reason-time"><i class="far fa-clock"></i> ${item.timestamp}</div>
+                    </div>
+                    <div class="reason-box">${item.reasons}</div>
+                </div>
+            `).join('');
+        }
+
+        function filterReasons() {
+            const kw = document.getElementById('reason-search').value.trim().toLowerCase();
+            if (!kw) {
+                renderReasons(globalReasons);
+                return;
+            }
+            const filtered = globalReasons.filter(item => {
+                const name = (item.songName || '').toLowerCase();
+                const artist = (item.artist || '').toLowerCase();
+                const reason = (item.reasons || '').toLowerCase();
+                return name.includes(kw) || artist.includes(kw) || reason.includes(kw);
+            });
+            renderReasons(filtered);
+        }
+
+        function pushToSite(encodedSongStr) {
+            if(!confirm("确定将此歌曲推送到网站主页吗？")) return;
+            const song = JSON.parse(decodeURIComponent(encodedSongStr));
+            
+            fetch('api.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'push_to_site', song: song })
+            }).then(res => res.json()).then(data => {
+                if(data.status === 'success') alert('推送成功！已拉取直链并追加到起床铃网页。');
+                else alert('推送失败: ' + data.message);
+            }).catch(() => alert('网络错误'));
+        }
+
+        function toggleAiMode(isChecked) {
+            fetch('api.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'toggle_ai_mode', mode: isChecked })
+            });
+        }
+
+        function updateAnnouncement() {
+            const text = document.getElementById('announcement-input').value;
+            fetch('api.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'update_announcement', text: text })
+            }).then(res => res.json()).then(data => {
+                if(data.status === 'success') alert('公告更新成功');
+                else alert('更新失败');
+            });
+        }
+
+        function clearAllData() {
+            if(!confirm("【危险】确定要彻底清空所有投稿数据和反馈记录吗？此操作不可逆！")) return;
+            fetch('api.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'clear_all_data' })
+            }).then(res => res.json()).then(data => {
+                if(data.status === 'success') {
+                    alert('数据已清空');
+                    loadAdminData(); 
+                } else alert('清空失败');
+            });
+        }
+    </script>
+</body>
+</html>
